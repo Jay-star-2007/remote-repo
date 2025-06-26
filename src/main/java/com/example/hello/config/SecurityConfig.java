@@ -61,7 +61,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/test/**").permitAll() // Example for public test endpoints
+                        .requestMatchers("/api/test/**").permitAll()
+                        .requestMatchers("/pass/**").permitAll() // Example for public test endpoints
                         .anyRequest().authenticated()
                 );
 

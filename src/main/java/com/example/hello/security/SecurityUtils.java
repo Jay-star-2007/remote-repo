@@ -30,4 +30,15 @@ public class SecurityUtils {
     public static Optional<String> getCurrentUserUsername() {
         return getCurrentUser().map(UserDetails::getUsername);
     }
+
+    /**
+     * Get the ID of the currently authenticated user.
+     *
+     * @return An Optional containing the user ID, or an empty Optional if no user is authenticated or the user is not an instance of our custom User class.
+     */
+    public static Optional<Long> getCurrentUserId() {
+        return getCurrentUser()
+                .filter(userDetails -> userDetails instanceof User)
+                .map(userDetails -> ((User) userDetails).getId());
+    }
 } 

@@ -1,9 +1,15 @@
 package com.example.hello.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class VehicleApplicationRequest {
 
     @NotBlank(message = "车牌号不能为空")

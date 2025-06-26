@@ -54,6 +54,11 @@ public class User implements UserDetails {
     }
 
     @Override
+    public String getPassword() {
+        return password;
+    }
+
+    @Override
     public String getUsername() {
         return phone; // 使用手机号作为登录用户名
     }

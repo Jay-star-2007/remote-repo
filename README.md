@@ -13,6 +13,7 @@
 - **持久层**: Spring Data JPA (Hibernate)
 - **数据库**: MySQL 8.0+
 - **安全与认证**: Spring Security, JSON Web Tokens (JWT)
+- **二维码生成**: Google ZXing
 - **模板引擎**: Thymeleaf (用于渲染扫码验证页面)
 - **构建工具**: Maven
 
@@ -27,27 +28,15 @@
 ### 3.2. 数据库设置
 
 1.  在您的MySQL实例中，执行 `mysql/init.sql` 脚本。这将创建名为 `schoolpass` 的数据库以及所有必需的数据表。
-
-#### 3.2.1. 创建管理员账户（可选，用于测试）
-
-系统默认注册的用户均为普通学生/教职工角色。如果您需要测试管理员功能，请遵循以下步骤：
-
-1.  通过 `POST /api/auth/register` 接口注册一个新用户。
-2.  使用数据库客户端连接到您的 `schoolpass` 数据库。
-3.  在 `users` 表中找到您刚刚创建的用户记录，记下其 `id`。
-4.  在 `user_roles` 表中，将该用户 `user_id` 对应的 `roles` 字段值从 `ROLE_STUDENT` 修改为 `ROLE_ADMIN`。
-
-### 3.3. 应用配置
-
-1.  打开 `src/main/resources/application.properties` 文件。
-2.  修改以下数据库连接配置，替换为您自己的数据库信息：
+2.  打开 `src/main/resources/application.properties` 文件。
+3.  修改以下数据库连接配置，替换为您自己的数据库信息：
     ```properties
     spring.datasource.url=jdbc:mysql://[你的数据库主机地址]:3306/schoolpass?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     spring.datasource.username=[你的数据库用户名]
     spring.datasource.password=[你的数据库密码]
     ```
 
-### 3.4. 运行应用
+### 3.3. 运行应用
 
 在项目根目录下，执行以下命令：
 
@@ -90,14 +79,6 @@ mvn spring-boot:run
     }
     ```
 -   **401 Unauthorized**: 未提供Token或Token无效/过期。
-    ```json
-    {
-        "status": 401,
-        "error": "Unauthorized",
-        "message": "认证失败: Full authentication is required to access this resource",
-        "path": "/api/vehicles/my-vehicle"
-    }
-    ```
 -   **403 Forbidden**: 已认证，但角色权限不足（如普通用户尝试访问管理员接口）。
 -   **404 Not Found**: 请求的资源不存在。
 
@@ -110,14 +91,14 @@ mvn spring-boot:run
 #### 5.1.1. 用户注册
 
 -   **Endpoint**: `POST /api/auth/register`
--   **描述**: 创建一个新的用户账户（默认为学生/教职工角色）。
+-   **描述**: 创建一个新的用户账户。
 -   **认证**: 无 (公开接口)
 -   **Request Body**:
     ```json
     {
-        "phone": "13800138002",
-        "studentId": "20240002",
-        "password": "password123"
+        "phone": "13800138000",
+        "studentId": "USER001",
+        "password": "userpassword"
     }
     ```
 -   **Success Response** (`200 OK`):
@@ -135,33 +116,21 @@ mvn spring-boot:run
 -   **Request Body**:
     ```json
     {
-        "phone": "13800138002",
-        "password": "password123"
+        "phone": "13800138000",
+        "password": "userpassword"
     }
     ```
 -   **Success Response** (`200 OK`):
     ```json
     {
-        "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMzgwMDEzODAwMiIsImlhdCI6MTY3OTk4OTg5NywiZXhwIjoxNjc5OTk3MDk3fQ.abc...",
-        "type": "Bearer",
+        "token": "eyJhbGciOiJI...",
         "id": 2,
-        "phone": "13800138002",
-        "studentId": "20240002"
+        "phone": "13800138000",
+        "roles": [
+            "ROLE_USER"
+        ]
     }
     ```
--   **Error Responses**:
-    -   `401 Unauthorized` (用户不存在):
-        ```json
-        {
-            "message": "该手机号未注册"
-        }
-        ```
-    -   `401 Unauthorized` (密码错误):
-        ```json
-        {
-            "message": "密码错误"
-        }
-        ```
 
 ---
 
@@ -182,21 +151,18 @@ mvn spring-boot:run
 -   **Success Response** (`200 OK`):
     ```json
     {
-        "message": "车辆申请已提交，请等待审核。"
+        "message": "申请已提交，等待审核"
     }
     ```
 
-#### 5.2.2. 查询我的车辆信息
+#### 5.2.2. 查询我的车辆列表
 
--   **Endpoint**: `GET /api/vehicles/my-vehicle`
--   **描述**: 获取当前登录用户所绑定的车辆信息及其状态。
+-   **Endpoint**: `GET /api/vehicles/my-vehicles`
+-   **描述**: 获取当前登录用户所绑定的所有车辆信息及其状态。
 -   **认证**: **需要** (Bearer Token)
 -   **Success Response** (`200 OK`):
-    -   **特别说明**: 
-        - 仅当`status`为`APPROVED`时，才会包含`passToken`字段。前端应使用此`passToken`的内容来生成二维码。该令牌有效期为60秒，每次请求此接口都会生成新的令牌。
-        - 仅当`status`为`REJECTED`时，才会包含`rejectionReason`字段。
-    -   **示例 (审核通过)**:
-        ```json
+    ```json
+    [
         {
             "id": 1,
             "licensePlate": "沪A-E12345",
@@ -204,24 +170,22 @@ mvn spring-boot:run
             "status": "APPROVED",
             "rejectionReason": null,
             "ownerId": 2,
-            "ownerPhone": "13800138002",
-            "passToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwiaWF0IjoxNjc5OTkwMTU5LCJleHAiOjE2Nzk5OTAxNzl9.def..."
-        }
-        ```
-    -   **示例 (审核被驳回)**:
-        ```json
-        {
-            "id": 1,
-            "licensePlate": "沪A-E12345",
-            "photoUrl": "https://example.com/my-bike.png",
-            "status": "REJECTED",
-            "rejectionReason": "照片不清晰，请重新上传。",
-            "ownerId": 2,
-            "ownerPhone": "13800138002",
+            "ownerPhone": "13800138000",
             "passToken": null
         }
-        ```
--   **Error Response** (`404 Not Found`): 如果用户还未申请车辆，则返回404。
+    ]
+    ```
+
+#### 5.2.3. 获取动态通行二维码
+
+-   **Endpoint**: `GET /api/vehicles/pass-qrcode`
+-   **描述**: 获取当前用户已获批车辆的动态通行二维码。该接口直接返回一张PNG格式的图片，前端可直接展示。
+-   **认证**: **需要** (Bearer Token)
+-   **Success Response** (`200 OK`):
+    -   **Content-Type**: `image/png`
+    -   **Response Body**: 二维码图片的二进制数据。
+-   **Error Response** (`500 Internal Server Error`):
+    -   如果用户没有已批准的车辆，或发生其他错误。
 
 ---
 
@@ -242,7 +206,7 @@ mvn spring-boot:run
             "status": "PENDING_APPROVAL",
             "rejectionReason": null,
             "ownerId": 2,
-            "ownerPhone": "13800138002",
+            "ownerPhone": "13800138000",
             "passToken": null
         }
     ]
@@ -268,31 +232,10 @@ mvn spring-boot:run
         "rejectionReason": "照片不清晰，请重新上传。"
     }
     ```
--   **Success Response** (`200 OK`): 返回更新后的车辆信息。
-    -   批准后的响应示例:
+-   **Success Response** (`200 OK`):
     ```json
     {
-        "id": 1,
-        "licensePlate": "沪A-E12345",
-        "photoUrl": "https://example.com/my-bike.png",
-        "status": "APPROVED",
-        "rejectionReason": null,
-        "ownerId": 2,
-        "ownerPhone": "13800138002",
-        "passToken": null
-    }
-    ```
-    -   驳回后的响应示例:
-    ```json
-    {
-        "id": 1,
-        "licensePlate": "沪A-E12345",
-        "photoUrl": "https://example.com/my-bike.png",
-        "status": "REJECTED",
-        "rejectionReason": "照片不清晰，请重新上传。",
-        "ownerId": 2,
-        "ownerPhone": "13800138002",
-        "passToken": null
+        "message": "审核操作成功"
     }
     ```
 
@@ -305,8 +248,33 @@ mvn spring-boot:run
 -   **Endpoint**: `GET /pass/{token}`
 -   **描述**: 公开接口，用于安保人员扫码后验证。此接口不返回JSON，而是直接返回一个渲染好的HTML页面。移动端App可通过WebView来加载此URL。
 -   **认证**: 无 (公开接口)
--   **URL参数**: `{token}` - 从`GET /api/vehicles/my-vehicle`接口获取的`passToken`。
+-   **URL参数**: `{token}` - 从动态二维码中解析出的令牌。
 -   **Success Response** (`200 OK`):
     -   返回一个包含车辆信息、车主信息和醒目通行状态的HTML页面。
 -   **Error Response** (`200 OK`):
     -   如果令牌无效或过期，同样返回一个HTML页面，但内容是"验证失败"的错误提示。
+
+---
+
+## 6. 测试指南
+
+### 6.1. 创建管理员账户 (临时方案)
+
+为了方便测试，我们在代码中加入了一个临时后门：
+
+-   **路径**: `src/main/java/com/example/hello/service/impl/AuthServiceImpl.java`
+-   **逻辑**: 在`registerUser`方法中，如果注册时使用的手机号为 **`00000000000`**，该账户将自动被赋予`ROLE_ADMIN`权限。
+
+您可以通过调用注册接口创建一个管理员用于测试：
+```bash
+curl -X POST http://localhost:8080/api/auth/register \
+-H "Content-Type: application/json" \
+-d '{
+  "phone": "00000000000",
+  "studentId": "ADMIN001",
+  "password": "adminpassword"
+}'
+```
+
+**重要提示**: 在生产部署前，请务必移除此临时代码。
+

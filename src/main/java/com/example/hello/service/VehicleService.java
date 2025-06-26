@@ -10,15 +10,15 @@ import java.util.Optional;
 
 public interface VehicleService {
 
-    void applyForVehiclePermit(VehicleApplicationRequest vehicleRequest);
+    Vehicle applyForVehicle(VehicleApplicationRequest request);
 
-    Optional<Vehicle> getCurrentUserVehicle();
+    List<VehicleResponse> getAllPendingVehicles();
 
-    VehicleResponse createVehicleResponse(Vehicle vehicle);
+    Vehicle reviewVehicle(Long id, ReviewRequest request);
 
-    List<Vehicle> getPendingApplications();
+    List<VehicleResponse> getMyVehicles();
 
-    Vehicle reviewApplication(Long vehicleId, ReviewRequest reviewRequest);
+    Optional<Vehicle> getVehicleById(Long id);
 
-    Optional<Vehicle> getVehicleById(Long vehicleId);
+    Optional<Vehicle> findMyApprovedVehicle();
 } 

@@ -1,6 +1,7 @@
 package com.example.hello.controller;
 
 import com.example.hello.dto.request.ReviewRequest;
+import com.example.hello.dto.response.MessageResponse;
 import com.example.hello.dto.response.VehicleResponse;
 import com.example.hello.service.VehicleService;
 import jakarta.validation.Valid;
@@ -22,19 +23,18 @@ public class AdminController {
 
     @GetMapping("/vehicles/pending")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<VehicleResponse>> getPendingApplications() {
-        List<VehicleResponse> pendingVehicles = vehicleService.getPendingApplications().stream()
-                .map(vehicleService::createVehicleResponse)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(pendingVehicles);
+    public List<VehicleResponse> getPendingVehicles() {
+        return vehicleService.getAllPendingVehicles();
     }
 
     @PostMapping("/vehicles/{id}/review")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<VehicleResponse> reviewApplication(@PathVariable Long id, @Valid @RequestBody ReviewRequest reviewRequest) {
-        VehicleResponse updatedVehicle = vehicleService.createVehicleResponse(
-                vehicleService.reviewApplication(id, reviewRequest)
-        );
-        return ResponseEntity.ok(updatedVehicle);
+    public ResponseEntity<?> reviewVehicle(@PathVariable Long id, @Valid @RequestBody ReviewRequest reviewRequest) {
+        try {
+            vehicleService.reviewVehicle(id, reviewRequest);
+            return ResponseEntity.ok(new MessageResponse("审核操作成功"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new MessageResponse("审核失败: " + e.getMessage()));
+        }
     }
 } 
