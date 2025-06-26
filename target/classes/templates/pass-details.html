@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>车辆通行凭证</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f4f4f9; }
+        .card { background: white; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 90%; max-width: 400px; padding: 20px; text-align: center; }
+        .status { padding: 15px; border-radius: 8px; font-size: 1.5em; font-weight: bold; color: white; margin-bottom: 20px; }
+        .status.approved { background-color: #28a745; }
+        .status.rejected { background-color: #dc3545; }
+        .status.pending { background-color: #ffc107; color: #333; }
+        .info-grid { display: grid; grid-template-columns: 100px 1fr; text-align: left; gap: 10px; margin-top: 20px; }
+        .info-grid span:first-child { font-weight: bold; color: #555; }
+        .photo { max-width: 100%; border-radius: 8px; margin-top: 15px; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div th:switch="${vehicle.status}">
+        <div th:case="${T(com.example.hello.domain.VehicleStatus).APPROVED}" class="status approved">允许通行</div>
+        <div th:case="${T(com.example.hello.domain.VehicleStatus).REJECTED}" class="status rejected">禁止通行</div>
+        <div th:case="*" class="status pending">状态待定</div>
+    </div>
+    <h2>车辆信息</h2>
+    <div class="info-grid">
+        <span>车牌号:</span>
+        <span th:text="${vehicle.licensePlate}">B12345</span>
+        <span>车主姓名:</span>
+        <span th:text="${owner.studentId}">张三</span> <!-- For privacy, you might want to hide parts of the name -->
+        <span>车主学号:</span>
+        <span th:text="${owner.studentId}">20210001</span>
+    </div>
+    <img th:src="${vehicle.photoUrl}" alt="车辆照片" class="photo"/>
+</div>
+</body>
+</html> 
